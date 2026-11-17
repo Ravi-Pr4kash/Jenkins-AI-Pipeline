@@ -39,15 +39,39 @@ pipeline {
         }
 
         stage('Load Image into Minikube') {
-    steps {
-        echo 'Loading Docker image into Minikube'
+            steps {
+                echo 'Loading Docker image into Minikube'
 
-        sh '''
-            minikube image load ${IMAGE_NAME}:${BUILD_NUMBER}
+                sh '''
+                    minikube image load ${IMAGE_NAME}:${BUILD_NUMBER}
 
-            minikube image ls | grep ${IMAGE_NAME}
-        '''
-    }
-}
+                    minikube image ls | grep ${IMAGE_NAME}
+                '''
+             }
+        }
+
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo 'Deploying backend using Helm'
+
+                sh '''
+                    helm upgrade --install jenkins-app ./helm/jenkins-app \
+                --namespace jenkins-app \
+                --set-string backend.image=${IMAGE_NAME}:${BUILD_NUMBER} \
+                --wait \
+                --timeout 3m
+
+                echo "Checking backend rollout..."
+
+                kubectl rollout status deployment/backend \
+                -n jenkins-app \
+                --timeout=180s
+
+                kubectl get pods -n jenkins-app
+                '''
+             }
+        }
+
     }
 }

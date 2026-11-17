@@ -5,7 +5,9 @@ pipeline {
     environment {
         PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         KUBECONFIG = "/Users/raviprakash/.kube/config"
+
         IMAGE_NAME = "jenkins-backend"
+        DOCKERHUB_IMAGE = "raviiprakashh/my-backend"
     }
 
     stages {
@@ -38,6 +40,34 @@ pipeline {
             }
         }
 
+        stage('Push to Docker Hub') {
+            steps {
+                echo 'Pushing image to Docker Hub'
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        echo "$DOCKER_TOKEN" | docker login \
+                          -u "$DOCKER_USER" --password-stdin
+
+                        docker tag \
+                          ${IMAGE_NAME}:${BUILD_NUMBER} \
+                          ${DOCKERHUB_IMAGE}:jenkins-${BUILD_NUMBER}
+
+                        docker push \
+                          ${DOCKERHUB_IMAGE}:jenkins-${BUILD_NUMBER}
+
+                        docker logout
+                    '''
+                }
+            }
+        }
+
         stage('Load Image into Minikube') {
             steps {
                 echo 'Loading Docker image into Minikube'
@@ -47,9 +77,8 @@ pipeline {
 
                     minikube image ls | grep ${IMAGE_NAME}
                 '''
-             }
+            }
         }
-
 
         stage('Deploy to Kubernetes') {
             steps {
@@ -57,20 +86,20 @@ pipeline {
 
                 sh '''
                     helm upgrade --install jenkins-app ./helm/jenkins-app \
-                --namespace jenkins-app \
-                --set-string backend.image=${IMAGE_NAME}:${BUILD_NUMBER} \
-                --wait \
-                --timeout 3m
+                      --namespace jenkins-app \
+                      --set-string backend.image=${IMAGE_NAME}:${BUILD_NUMBER} \
+                      --wait \
+                      --timeout 3m
 
-                echo "Checking backend rollout..."
+                    echo "Checking backend rollout..."
 
-                kubectl rollout status deployment/backend \
-                -n jenkins-app \
-                --timeout=180s
+                    kubectl rollout status deployment/backend \
+                      -n jenkins-app \
+                      --timeout=180s
 
-                kubectl get pods -n jenkins-app
+                    kubectl get pods -n jenkins-app
                 '''
-             }
+            }
         }
 
     }

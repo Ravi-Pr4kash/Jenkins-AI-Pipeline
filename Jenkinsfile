@@ -37,5 +37,17 @@ pipeline {
                 '''
             }
         }
+
+        stage('Load Image into Minikube') {
+    steps {
+        echo 'Loading Docker image into Minikube'
+
+        sh '''
+            minikube image load ${IMAGE_NAME}:${BUILD_NUMBER}
+
+            minikube image ls | grep ${IMAGE_NAME}
+        '''
+    }
+}
     }
 }

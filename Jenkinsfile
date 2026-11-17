@@ -41,33 +41,30 @@ pipeline {
         }
 
         stage('Push to Docker Hub') {
-            steps {
-                echo 'Pushing image to Docker Hub'
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'dockerhub-creds',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_TOKEN'
+            )
+        ]) {
+            sh '''
+                echo "$DOCKER_TOKEN" | docker login \
+                    -u "$DOCKER_USER" --password-stdin
+            '''
 
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_TOKEN'
-                    )
-                ]) {
-                    sh '''
-                        echo "$DOCKER_TOKEN" | docker login \
-                          -u "$DOCKER_USER" --password-stdin
-
-                        docker tag \
-                          ${IMAGE_NAME}:${BUILD_NUMBER} \
-                          ${DOCKERHUB_IMAGE}:jenkins-${BUILD_NUMBER}
-
-                        docker push \
-                          ${DOCKERHUB_IMAGE}:jenkins-${BUILD_NUMBER}
-
-                        docker logout
-                    '''
-                }
+            retry(3) {
+                sh '''
+                    docker push \
+                    raviiprakashh/my-backend:jenkins-${BUILD_NUMBER}
+                '''
             }
-        }
 
+            sh 'docker logout'
+        }
+    }
+}
         stage('Load Image into Minikube') {
             steps {
                 echo 'Loading Docker image into Minikube'

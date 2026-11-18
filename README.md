@@ -1,113 +1,52 @@
-# Jenkins AI-Powered CI/CD Pipeline
+# Jenkins CI/CD Pipeline with Claude AI
 
-An automated CI/CD pipeline that uses Jenkins, Docker, Docker Hub, and Kubernetes to test, build, and deploy a Node.js backend application.
-
-## Overview
-
-Whenever code is pushed to GitHub, a webhook automatically triggers Jenkins, which executes the complete deployment pipeline.
+An automated CI/CD pipeline that builds, tests, and deploys a Node.js backend application to Kubernetes using Jenkins, Docker, and Helm. Integrated with Claude AI for automatic pipeline failure analysis.
 
 ## Tech Stack
+- **CI/CD:** Jenkins, GitHub Webhooks
+- **Containerization:** Docker, Docker Hub
+- **Orchestration:** Kubernetes, Minikube, Helm
+- **Backend:** Node.js, Express
+- **Database:** PostgreSQL, Redis
+- **AI:** Claude API
 
-- **Jenkins** – CI/CD automation
-- **GitHub Webhooks** – Automatic pipeline triggering
-- **Docker** – Containerization
-- **Docker Hub** – Image registry
-- **Kubernetes (Minikube)** – Container orchestration
-- **Helm** – Kubernetes deployment management
-- **Node.js** – Backend application
-- **PostgreSQL & Redis** – Data storage and caching
-- **ngrok** – Exposes local Jenkins to GitHub
+## Pipeline Workflow
 
-## CI/CD Workflow
+1. Developer pushes code to GitHub.
+2. GitHub webhook triggers Jenkins.
+3. Jenkins installs dependencies and runs tests.
+4. Builds and pushes Docker image to Docker Hub.
+5. Deploys the application to Kubernetes using Helm.
+6. On pipeline failure, Claude AI analyzes logs and provides root-cause diagnosis and suggested fixes.
 
-```text
-Developer Push
-      |
-      v
-GitHub Webhook
-      |
-      v
-    Jenkins
-      |
-      v
- Install & Test
-      |
-      v
- Build Docker Image
-      |
-      v
- Push to Docker Hub
-      |
-      v
- Kubernetes (Minikube)
-      |
-      v
- Helm Deployment
-      |
-      v
- Backend Running
-```
+## AI Failure Diagnosis
 
-## Getting Started
+- Automatically captures pipeline logs.
+- Sends logs to Claude API.
+- Identifies errors and possible root causes.
+- Provides troubleshooting suggestions in Jenkins Console Output.
 
-**1. Start Jenkins**
-
-```bash
-brew services start jenkins-lts
-```
-
-Access: http://localhost:8080
-
-**2. Start Minikube**
-
-```bash
-minikube start
-kubectl get nodes
-```
-
-**3. Start ngrok**
-
-```bash
-ngrok http 8080
-```
-
-Configure its HTTPS URL as your GitHub repository webhook endpoint:
+## Project Structure
 
 ```text
-https://YOUR-NGROK-URL/github-webhook/
+├── backend/
+├── helm/
+├── script/
+│   ├── ai.js
+│   └── failure.js
+├── Jenkinsfile
+├── docker-compose.yml
+├── .gitignore
+└── README.md
 ```
 
-Enable **GitHub hook trigger for GITScm polling** in your Jenkins job.
+## Key Features
 
-**4. Run the pipeline**
+- Automated CI/CD using Jenkins.
+- GitHub webhook integration.
+- Docker image build and push.
+- Kubernetes deployment using Helm.
+- PostgreSQL and Redis integration.
+- AI-powered pipeline failure diagnosis.
 
-Push your code to GitHub:
-
-```bash
-git add .
-git commit -m "Update application"
-git push origin main
-```
-
-Jenkins automatically executes the pipeline and deploys the updated application to Kubernetes.
-
-## Useful Commands
-
-```bash
-kubectl get pods -n jenkins-app
-kubectl get deployments -n jenkins-app
-helm list -n jenkins-app
-minikube status
-```
-
-## Future Improvements
-
-- AI-powered build failure diagnosis
-- AI-based code review
-- Prometheus and Grafana monitoring
-- Automated deployment rollback
-
-## Links
-
-- [GitHub Repository](https://github.com/Ravi-Pr4kash/Jenkins-AI-Pipeline)
-- [Docker Hub](https://hub.docker.com/repository/docker/raviiprakashh/my-backend)
+**Goal:** Combining DevOps automation with AI-powered troubleshooting.

@@ -96,5 +96,19 @@ pipeline {
     }
 
 }   
+
+    stage('Test Claude API') {
+    steps {
+        withCredentials([
+            string(
+                credentialsId: 'claude-api-key',
+                variable: 'ANTHROPIC_API_KEY'
+            )
+        ]) {
+            sh 'node script/ai.js'
+        }
+    }
+}
+
  }
 }

@@ -2,6 +2,10 @@
 pipeline {
     agent any
 
+    options {
+        disableConcurrentBuilds()
+    }
+
     environment {
         PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         KUBECONFIG = "/Users/raviprakash/.kube/config"
@@ -19,7 +23,7 @@ pipeline {
 
                 sh '''
                     #!/bin/bash
-                    set -o pipefail
+                    set -euo pipefail
 
                     : > "$WORKSPACE/pipeline.log"
 
@@ -33,18 +37,6 @@ pipeline {
             }
         }
 
-
-        stage('Simulate Failure') {
-    steps {
-        sh '''
-            echo "SIMULATED ERROR: PostgreSQL connection failed" \
-              2>&1 | tee -a "$WORKSPACE/pipeline.log"
-
-            exit 1
-        '''
-    }
-}
-
         // 2. Build Docker image
         stage('Build Docker Image') {
             steps {
@@ -52,7 +44,7 @@ pipeline {
 
                 sh '''
                     #!/bin/bash
-                    set -o pipefail
+                    set -euo pipefail
 
                     docker build \
                       -t ${IMAGE_NAME}:${BUILD_NUMBER} \
@@ -62,7 +54,7 @@ pipeline {
             }
         }
 
-        // 3. Push image to Docker Hub
+        // 3. Push Docker image
         stage('Push to Docker Hub') {
             steps {
                 script {
@@ -74,29 +66,34 @@ pipeline {
                         )
                     ]) {
 
-                        sh '''
-                            #!/bin/bash
-                            set -o pipefail
-
-                            echo "$DOCKER_TOKEN" | docker login \
-                                -u "$DOCKER_USER" --password-stdin
-
-                            docker tag \
-                                ${IMAGE_NAME}:${BUILD_NUMBER} \
-                                ${DOCKERHUB_IMAGE}:jenkins-${BUILD_NUMBER}
-                        ''' 
-                        
                         try {
+                            sh '''
+                                #!/bin/bash
+                                set -euo pipefail
+                                set +x
+
+                                echo "$DOCKER_TOKEN" | docker login \
+                                  -u "$DOCKER_USER" \
+                                  --password-stdin \
+                                  2>&1 | tee -a "$WORKSPACE/pipeline.log"
+
+                                docker tag \
+                                  ${IMAGE_NAME}:${BUILD_NUMBER} \
+                                  ${DOCKERHUB_IMAGE}:jenkins-${BUILD_NUMBER} \
+                                  2>&1 | tee -a "$WORKSPACE/pipeline.log"
+                            '''
+
                             retry(3) {
                                 sh '''
                                     #!/bin/bash
-                                    set -o pipefail
+                                    set -euo pipefail
 
                                     docker push \
                                       ${DOCKERHUB_IMAGE}:jenkins-${BUILD_NUMBER} \
                                       2>&1 | tee -a "$WORKSPACE/pipeline.log"
                                 '''
                             }
+
                         } finally {
                             sh 'docker logout || true'
                         }
@@ -112,7 +109,7 @@ pipeline {
 
                 sh '''
                     #!/bin/bash
-                    set -o pipefail
+                    set -euo pipefail
 
                     helm upgrade --install jenkins-app ./helm/jenkins-app \
                       --namespace jenkins-app \
@@ -128,6 +125,8 @@ pipeline {
                       --timeout=180s \
                       2>&1 | tee -a "$WORKSPACE/pipeline.log"
 
+                    echo "Checking Kubernetes pods..."
+
                     kubectl get pods -n jenkins-app \
                       2>&1 | tee -a "$WORKSPACE/pipeline.log"
                 '''
@@ -135,8 +134,9 @@ pipeline {
         }
     }
 
-    // 5. Run Claude AI diagnosis only when pipeline fails
+    // Run AI diagnosis only when a pipeline stage fails
     post {
+
         failure {
             script {
                 echo "Pipeline failed! Sending logs to Claude AI..."
@@ -152,10 +152,19 @@ pipeline {
                             node script/failure.js pipeline.log
                         '''
                     }
+
                 } catch (err) {
                     echo "AI diagnosis could not run: ${err.message}"
                 }
             }
+        }
+
+        // Save logs as a Jenkins build artifact
+        always {
+            archiveArtifacts(
+                artifacts: 'pipeline.log',
+                allowEmptyArchive: true
+            )
         }
     }
 }

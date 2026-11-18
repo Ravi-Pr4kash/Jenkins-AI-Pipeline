@@ -1,0 +1,20 @@
+
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Jenkins generated logs
+pipeline.log
+failure.log
+
+# Operating system
+.DS_Store
+
+# Build output
+dist/
+coverage/

@@ -33,6 +33,18 @@ pipeline {
             }
         }
 
+
+        stage('Simulate Failure') {
+    steps {
+        sh '''
+            echo "SIMULATED ERROR: PostgreSQL connection failed" \
+              2>&1 | tee -a "$WORKSPACE/pipeline.log"
+
+            exit 1
+        '''
+    }
+}
+
         // 2. Build Docker image
         stage('Build Docker Image') {
             steps {

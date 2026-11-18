@@ -16,6 +16,6 @@ redis:
 
 
 backend:
-  image: jenkins-backend:v1
+  image: docker.io/raviiprakashh/my-backend:latest
   replicas: 1
   port: 3000

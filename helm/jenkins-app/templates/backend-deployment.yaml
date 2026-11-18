@@ -22,7 +22,7 @@ spec:
         - name: backend
 
           image: {{ .Values.backend.image }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
 
           ports:
             - containerPort: {{ .Values.backend.port }}

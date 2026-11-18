@@ -24,18 +24,27 @@ async function analyzeFailure() {
     const limitedLogs = logs.slice(-12000);
 
     const prompt = `
-You are an experienced DevOps engineer.
+You are an experienced DevOps engineer analyzing Jenkins pipeline logs.
 
-Analyze this Jenkins pipeline failure.
+Analyze the actual failure shown in these logs.
+
+Important rules:
+- Identify the exact stage and command that failed.
+- Do not assume a warning is the root cause.
+- If you see "SIMULATED ERROR", recognize that it was deliberately injected for testing.
+- Do not claim that a simulated error proves a real database failure.
+- Distinguish actual errors from warnings.
 
 Explain:
-1. What went wrong?
-2. What is the root cause?
-3. How can we fix it?
-4. What exact command or code change is required?
 
-Use simple, beginner-friendly language.
-Be practical and concise.
+1. What went wrong?
+2. Which pipeline stage failed?
+3. What is the root cause?
+4. How can we fix it?
+5. Give the exact command or code change if applicable.
+
+Keep your answer beginner-friendly and concise.
+Limit your response to approximately 250 words.
 
 JENKINS FAILURE LOGS:
 ${limitedLogs}
@@ -54,7 +63,7 @@ ${limitedLogs}
             model: "claude-haiku-5-5",
 
             // Allow enough room for the diagnosis
-            max_tokens: 1200,
+            max_tokens: 2000,
 
             // Disable extended thinking for this simple task
             thinking: {

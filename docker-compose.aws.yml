@@ -1,0 +1,81 @@
+
+services:
+  backend:
+    image: raviiprakashh/my-backend:latest
+    container_name: app-backend
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      DB_USER: postgres
+      DB_HOST: postgres
+      DB_NAME: docker_project
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - app-network
+
+    mem_limit: 256m
+
+  postgres:
+    image: postgres:17
+    container_name: app-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: docker_project
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d docker_project"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - app-network
+
+    mem_limit: 384m
+
+  redis:
+    image: redis:7
+    container_name: app-redis
+    restart: unless-stopped
+
+    command: ["redis-server", "--appendonly", "yes"]
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+    networks:
+      - app-network
+
+    mem_limit: 96m
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -18,3 +18,12 @@ failure.log
 # Build output
 dist/
 coverage/
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+
+.env.aws

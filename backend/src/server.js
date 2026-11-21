@@ -2,10 +2,60 @@ const express = require("express");
 const pool = require("./config/db");
 const redisClient = require("./config/redis");
 const userRoutes = require("./routes/user");
+const client = require("prom-client");
+
+client.collectDefaultMetrics();
+
+// Count HTTP requests
+const httpRequests = new client.Counter({
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status_code"],
+});
+
+// Measure response time
+const httpDuration = new client.Histogram({
+  name: "http_request_duration_seconds",
+  help: "HTTP request duration in seconds",
+  labelNames: ["method", "route", "status_code"],
+  buckets: [0.1, 0.3, 0.5, 1, 2, 5],
+});
 
 const app = express();
 
 app.use(express.json());
+
+// Middleware
+app.use((req, res, next) => {
+  if (req.path === "/metrics") return next();
+
+  const start = process.hrtime();
+
+  res.on("finish", () => {
+    const duration = process.hrtime(start);
+    const seconds = duration[0] + duration[1] / 1e9;
+
+    const route = req.route
+      ? `${req.baseUrl}${req.route.path}`
+      : "unmatched";
+
+    const labels = {
+      method: req.method,
+      route,
+      status_code: String(res.statusCode),
+    };
+
+    httpRequests.inc(labels);
+    httpDuration.observe(labels, seconds);
+  });
+
+  next();
+});
+
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", client.register.contentType);
+  res.end(await client.register.metrics());
+});
 
 app.get("/", (req, res) => {
     res.json({
